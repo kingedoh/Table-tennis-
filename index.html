@@ -1,16 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Table Tennis Arcade</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realistic Table Tennis</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>🏓 Table Tennis Arcade</h1>
+  <h1>🏓 Realistic Table Tennis</h1>
+  <div id="scoreboard">
+    <span id="playerScore">0</span> - <span id="aiScore">0</span>
+  </div>
+
   <canvas id="gameCanvas"></canvas>
-  <div id="score">You: 0 | CPU: 0</div>
-  <button id="resetBtn">Restart Game</button>
-  <script src="game.js"></script>
+
+  <div id="controls">
+    <label for="difficulty">Difficulty:</label>
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+      <option value="superhard">Super Hard</option>
+    </select>
+    <button onclick="startGame()">Restart</button>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
