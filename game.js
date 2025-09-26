@@ -1,163 +1,125 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const scoreDisplay = document.getElementById("score");
-const resetBtn = document.getElementById("resetBtn");
 
-canvas.width = 480;
-canvas.height = 320;
+canvas.width = window.innerWidth * 0.9;
+canvas.height = window.innerHeight * 0.6;
 
 let playerScore = 0;
-let cpuScore = 0;
-let gameOver = false;
+let aiScore = 0;
+const winningScore = 11;
 
-const paddleHeight = 80;
-const paddleWidth = 15;
+let difficulty = "medium";
 
-let playerY = (canvas.height - paddleHeight) / 2;
-let cpuY = (canvas.height - paddleHeight) / 2;
-const playerX = 20;
-const cpuX = canvas.width - paddleWidth - 20;
+const paddleWidth = 100;
+const paddleHeight = 15;
 
-let ballX = canvas.width / 2;
-let ballY = canvas.height / 2;
-let ballRadius = 10;
-let ballSpeedX = 4;
-let ballSpeedY = 4;
+let playerPaddle = { x: canvas.width/2 - paddleWidth/2, y: canvas.height - 30, w: paddleWidth, h: paddleHeight, color: "red"};
+let aiPaddle = { x: canvas.width/2 - paddleWidth/2, y: 15, w: paddleWidth, h: paddleHeight, color: "blue"};
 
-const hitSound = new Audio("assets/hit.wav");
-const scoreSound = new Audio("assets/score.wav");
-const winSound = new Audio("assets/win.wav");
+let ball = { x: canvas.width/2, y: canvas.height/2, r: 10, speedX: 4, speedY: 4 };
 
-function drawTable() {
-  ctx.fillStyle = "#006400";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(canvas.width / 2, 0);
-  ctx.lineTo(canvas.width / 2, canvas.height);
-  ctx.stroke();
+document.getElementById("difficulty").addEventListener("change", (e)=>{
+  difficulty = e.target.value;
+});
+
+canvas.addEventListener("mousemove", (e)=>{
+  let rect = canvas.getBoundingClientRect();
+  playerPaddle.x = e.clientX - rect.left - playerPaddle.w/2;
+});
+
+function resetBall(){
+  ball.x = canvas.width/2;
+  ball.y = canvas.height/2;
+  ball.speedX = 4 * (Math.random() > 0.5 ? 1 : -1);
+  ball.speedY = 4 * (Math.random() > 0.5 ? 1 : -1);
 }
 
-function drawPaddle(x, y, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, paddleWidth, paddleHeight);
+function drawPaddle(p){
+  ctx.fillStyle = p.color;
+  ctx.fillRect(p.x, p.y, p.w, p.h);
 }
 
-function drawBall(x, y) {
+function drawBall(){
   ctx.beginPath();
-  ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
-  ctx.fillStyle = "#fff";
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+  ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
 }
 
-function resetBall() {
-  ballX = canvas.width / 2;
-  ballY = canvas.height / 2;
-  ballSpeedX = (Math.random() > 0.5 ? 4 : -4);
-  ballSpeedY = (Math.random() > 0.5 ? 4 : -4);
+function updateAI(){
+  let targetX = ball.x - aiPaddle.w/2;
+  let aiSpeed;
+  if(difficulty === "easy") aiSpeed = 3;
+  else if(difficulty === "medium") aiSpeed = 5;
+  else if(difficulty === "hard") aiSpeed = 7;
+  else aiSpeed = 10;
+
+  if(aiPaddle.x < targetX) aiPaddle.x += aiSpeed;
+  else aiPaddle.x -= aiSpeed;
+
+  // clamp AI
+  aiPaddle.x = Math.max(0, Math.min(canvas.width - aiPaddle.w, aiPaddle.x));
 }
 
-function update() {
-  if (gameOver) return;
+function updateBall(){
+  ball.x += ball.speedX;
+  ball.y += ball.speedY;
 
-  ballX += ballSpeedX;
-  ballY += ballSpeedY;
-
-  if (ballY - ballRadius < 0 || ballY + ballRadius > canvas.height) {
-    ballSpeedY = -ballSpeedY;
+  // bounce off side walls
+  if(ball.x - ball.r < 0 || ball.x + ball.r > canvas.width){
+    ball.speedX *= -1;
   }
 
-  // Player collision
-  if (
-    ballX - ballRadius < playerX + paddleWidth &&
-    ballY > playerY &&
-    ballY < playerY + paddleHeight
-  ) {
-    ballSpeedX = -ballSpeedX;
-    let hitPos = ballY - (playerY + paddleHeight / 2);
-    ballSpeedY = hitPos * 0.25;
-    hitSound.play();
-  }
-
-  // CPU collision
-  if (
-    ballX + ballRadius > cpuX &&
-    ballY > cpuY &&
-    ballY < cpuY + paddleHeight
-  ) {
-    ballSpeedX = -ballSpeedX;
-    let hitPos = ballY - (cpuY + paddleHeight / 2);
-    ballSpeedY = hitPos * 0.25;
-    hitSound.play();
-  }
-
-  // Score check
-  if (ballX - ballRadius < 0) {
-    cpuScore++;
-    scoreSound.play();
-    resetBall();
-  } else if (ballX + ballRadius > canvas.width) {
+  // ball goes out top or bottom
+  if(ball.y - ball.r < 0){
     playerScore++;
-    scoreSound.play();
+    updateScore();
+    resetBall();
+  } else if(ball.y + ball.r > canvas.height){
+    aiScore++;
+    updateScore();
     resetBall();
   }
 
-  // CPU AI
-  const cpuCenter = cpuY + paddleHeight / 2;
-  if (cpuCenter < ballY - 10) {
-    cpuY += 5;
-  } else if (cpuCenter > ballY + 10) {
-    cpuY -= 5;
+  // collision with paddles
+  if(ball.y + ball.r > playerPaddle.y && ball.x > playerPaddle.x && ball.x < playerPaddle.x + playerPaddle.w){
+    ball.speedY *= -1;
+    ball.y = playerPaddle.y - ball.r;
   }
 
-  // Touch control
-  canvas.ontouchmove = function (e) {
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const y = touch.clientY - rect.top;
-    playerY = y - paddleHeight / 2;
-    if (playerY < 0) playerY = 0;
-    if (playerY + paddleHeight > canvas.height) playerY = canvas.height - paddleHeight;
-  };
-
-  // Win check
-  if (playerScore >= 11 || cpuScore >= 11) {
-    gameOver = true;
-    winSound.play();
+  if(ball.y - ball.r < aiPaddle.y + aiPaddle.h && ball.x > aiPaddle.x && ball.x < aiPaddle.x + aiPaddle.w){
+    ball.speedY *= -1;
+    ball.y = aiPaddle.y + aiPaddle.h + ball.r;
   }
 }
 
-function draw() {
-  drawTable();
-  drawPaddle(playerX, playerY, "#00f");
-  drawPaddle(cpuX, cpuY, "#f00");
-  drawBall(ballX, ballY);
-  scoreDisplay.innerText = `You: ${playerScore} | CPU: ${cpuScore}`;
-
-  if (gameOver) {
-    ctx.fillStyle = "#fff";
-    ctx.font = "24px Arial";
-    ctx.fillText(
-      playerScore >= 11 ? "You Win! 🎉" : "CPU Wins! 🤖",
-      canvas.width / 2 - 80,
-      canvas.height / 2
-    );
+function updateScore(){
+  document.getElementById("playerScore").textContent = playerScore;
+  document.getElementById("aiScore").textContent = aiScore;
+  if(playerScore >= winningScore || aiScore >= winningScore){
+    alert(playerScore >= winningScore ? "You Win!" : "AI Wins!");
+    playerScore = 0;
+    aiScore = 0;
+    resetBall();
   }
 }
 
-function gameLoop() {
-  update();
-  draw();
+function gameLoop(){
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  drawPaddle(playerPaddle);
+  drawPaddle(aiPaddle);
+  drawBall();
+  updateAI();
+  updateBall();
   requestAnimationFrame(gameLoop);
 }
 
-resetBtn.onclick = () => {
-  playerScore = 0;
-  cpuScore = 0;
-  gameOver = false;
+function startGame(){
+  playerScore = 0; aiScore = 0;
   resetBall();
-};
+}
 
-gameLoop();
+startGame();
+gameLoop();;
+             
