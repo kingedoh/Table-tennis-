@@ -1,8 +1,9 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth * 0.9;
-canvas.height = window.innerHeight * 0.6;
+// Make the table almost full width and taller for realism
+canvas.width = window.innerWidth * 0.98;
+canvas.height = window.innerHeight * 0.7;
 
 let playerScore = 0;
 let aiScore = 0;
@@ -10,28 +11,37 @@ const winningScore = 11;
 
 let difficulty = "medium";
 
-const paddleWidth = 100;
+const paddleWidth = 120;
 const paddleHeight = 15;
 
-let playerPaddle = { x: canvas.width/2 - paddleWidth/2, y: canvas.height - 30, w: paddleWidth, h: paddleHeight, color: "red"};
-let aiPaddle = { x: canvas.width/2 - paddleWidth/2, y: 15, w: paddleWidth, h: paddleHeight, color: "blue"};
+let playerPaddle = { x: canvas.width/2 - paddleWidth/2, y: canvas.height - 40, w: paddleWidth, h: paddleHeight, color: "red"};
+let aiPaddle = { x: canvas.width/2 - paddleWidth/2, y: 25, w: paddleWidth, h: paddleHeight, color: "blue"};
 
-let ball = { x: canvas.width/2, y: canvas.height/2, r: 10, speedX: 4, speedY: 4 };
+let ball = { x: canvas.width/2, y: canvas.height/2, r: 12, speedX: 5, speedY: 5 };
 
 document.getElementById("difficulty").addEventListener("change", (e)=>{
   difficulty = e.target.value;
 });
 
-canvas.addEventListener("mousemove", (e)=>{
-  let rect = canvas.getBoundingClientRect();
-  playerPaddle.x = e.clientX - rect.left - playerPaddle.w/2;
+// Touch control for mobile
+canvas.addEventListener("touchmove", function(e){
+    let rect = canvas.getBoundingClientRect();
+    let touch = e.touches[0];
+    playerPaddle.x = touch.clientX - rect.left - playerPaddle.w/2;
+    e.preventDefault();
+}, {passive:false});
+
+// Keep mouse for desktop
+canvas.addEventListener("mousemove", function(e){
+    let rect = canvas.getBoundingClientRect();
+    playerPaddle.x = e.clientX - rect.left - playerPaddle.w/2;
 });
 
 function resetBall(){
   ball.x = canvas.width/2;
   ball.y = canvas.height/2;
-  ball.speedX = 4 * (Math.random() > 0.5 ? 1 : -1);
-  ball.speedY = 4 * (Math.random() > 0.5 ? 1 : -1);
+  ball.speedX = 5 * (Math.random() > 0.5 ? 1 : -1);
+  ball.speedY = 5 * (Math.random() > 0.5 ? 1 : -1);
 }
 
 function drawPaddle(p){
@@ -58,7 +68,6 @@ function updateAI(){
   if(aiPaddle.x < targetX) aiPaddle.x += aiSpeed;
   else aiPaddle.x -= aiSpeed;
 
-  // clamp AI
   aiPaddle.x = Math.max(0, Math.min(canvas.width - aiPaddle.w, aiPaddle.x));
 }
 
@@ -121,5 +130,5 @@ function startGame(){
 }
 
 startGame();
-gameLoop();;
+gameLoop();
              
